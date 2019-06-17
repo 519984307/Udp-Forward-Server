@@ -41,7 +41,8 @@ SOURCES += \
 	QDEP_PROJECT_LINK_DEPENDS += Skycoder42/cryptopp-qdep
 }
 
-include(../protocol/protocol.pri)
+QDEP_DEPENDS += \
+	Skycoder42/Udp-Forward-Server@0.1.1/protocol/protocol.pri
 
 isEmpty(UDP_FWD_SVC_INSTALL_BINS): UDP_FWD_SVC_INSTALL_BINS = $$[QT_INSTALL_BINS]
 isEmpty(UDP_FWD_SVC_INSTALL_LIBS): UDP_FWD_SVC_INSTALL_LIBS = $$[QT_INSTALL_LIBS]
