@@ -42,7 +42,7 @@ SOURCES += \
 }
 
 QDEP_DEPENDS += \
-	Skycoder42/Udp-Forward-Server@0.1.2/protocol.pri
+	Skycoder42/Udp-Forward-Server@1.0.0/protocol/protocol.pri
 
 isEmpty(UDP_FWD_SVC_INSTALL_BINS): UDP_FWD_SVC_INSTALL_BINS = $$[QT_INSTALL_BINS]
 isEmpty(UDP_FWD_SVC_INSTALL_LIBS): UDP_FWD_SVC_INSTALL_LIBS = $$[QT_INSTALL_LIBS]
