@@ -1,0 +1,11 @@
+[Unit]
+Description=Udp-Forward-Server Socket
+Documentation=https://github.com/Skycoder42/Udp-Forward-Server
+After=network.target
+PartOf=udpforwarderservice.service
+
+[Socket]
+ListenDatagram=13119
+
+[Install]
+WantedBy=sockets.target

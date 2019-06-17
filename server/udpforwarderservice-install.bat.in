@@ -1,0 +1,3 @@
+@echo off
+sc create udpforwarder binPath= \"$$system_path($${target.path}\\$${TARGET}.exe) --backend windows\" start= demand displayname= \"Udp-Forward-Server\" || exit /B 1
+sc description udpforwarder \"The Udp-Forward-Server Service\" || exit /B 1

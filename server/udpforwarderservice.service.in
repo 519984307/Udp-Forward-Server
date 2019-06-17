@@ -1,0 +1,17 @@
+[Unit]
+Description=Udp-Forward-Server Service
+Documentation=https://github.com/Skycoder42/Udp-Forward-Server
+After=network-online.target udpforwarderservice.socket
+
+[Service]
+Type=notify
+NotifyAccess=exec
+ExecStart=$${target.path}/$$TARGET --backend systemd
+ExecReload=$${target.path}/$$TARGET --backend systemd reload
+ExecStop=$${target.path}/$$TARGET --backend systemd stop
+WatchdogSec=10
+Restart=on-abnormal
+RuntimeDirectory=$$TARGET
+
+[Install]
+WantedBy=default.target
