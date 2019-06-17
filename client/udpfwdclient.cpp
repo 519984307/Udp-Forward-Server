@@ -30,7 +30,7 @@ bool UdpFwdClient::setup(PrivateKey key, QHostAddress fwdSvcAddress, quint16 por
 	if (_socket->bind(QHostAddress::Any, 0, QAbstractSocket::DontShareAddress))
 		return true;
 	else {
-		_lastError = _socket->error();
+		_lastError = _socket->errorString();
 		emit error();
 		return false;
 	}
