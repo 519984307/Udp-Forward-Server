@@ -31,18 +31,13 @@ private slots:
 	void readyRead();
 
 private:
-	struct Peer {
-		QHostAddress host;
-		quint16 port;
-
-		bool operator==(const Peer &other) const;
-	};
+	using Peer = std::pair<QHostAddress, quint16>; // (host, port)
 	using PeerInfo = std::pair<Peer, UdpFwdProto::PublicKey>; // (peer, pubKey)
 	using ReplyInfo = std::pair<QByteArray, std::optional<Peer>>; // (fingerprint, sender)
 
 	friend inline QDebug operator<<(QDebug debug, const Peer &peer) {
 		QDebugStateSaver state{debug};
-		debug.noquote().nospace() << peer.host.toString() << ":" << peer.port;
+		debug.noquote().nospace() << peer.first.toString() << ":" << peer.second;
 		return debug;
 	}
 

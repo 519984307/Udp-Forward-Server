@@ -10,7 +10,7 @@ win32: TARGET = $${TARGET_BASE}svc
 else:unix: TARGET = $${TARGET_BASE}d
 unix: TARGET = $$TARGET_BASE
 
-VERSION = 1.0.5
+VERSION = 1.0.4
 
 QMAKE_TARGET_PRODUCT = "Udp-Forward-Server"
 QMAKE_TARGET_DESCRIPTION = "The Udp-Forward-Server Service"

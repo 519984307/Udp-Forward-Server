@@ -44,7 +44,8 @@ void PackageForwarder::readyRead()
 {
 	while (_socket->hasPendingDatagrams()) {
 		const auto datagram = _socket->receiveDatagram();
-		const Peer peer {datagram.senderAddress(), static_cast<quint16>(datagram.senderPort())};
+		const Peer peer {datagram.senderAddress(), datagram.senderPort()};
+		qDebug() << peer << datagram.data();
 		try {
 			MsgHandler handler{this, peer};
 			std::visit(handler, Message::deserialize<AnnouncePeerMessage, DismissPeerMessage, TunnelInMessage>(datagram.data()));
@@ -58,7 +59,7 @@ void PackageForwarder::sendError(const Peer &peer, ErrorMessage::Error error)
 {
 	ErrorMessage reply;
 	reply.error = error;
-	_socket->writeDatagram(Message::serialize(reply), peer.host, peer.port);
+	_socket->writeDatagram(Message::serialize(reply), peer.first, peer.second);
 }
 
 void PackageForwarder::MsgHandler::operator ()(AnnouncePeerMessage &&message)
@@ -159,7 +160,7 @@ void PackageForwarder::MsgHandler::operator()(TunnelInMessage &&message)
 			const auto fingerprint = fingerPrint(*reply.replyKey);
 			self->_replyCache.insert({fingerprint, fwdPeer->first}, new PeerInfo{std::move(peer), *std::move(reply.replyKey)});
 		}
-		self->_socket->writeDatagram(Message::serialize(reply), fwdPeer->first.host, fwdPeer->first.port);
+		self->_socket->writeDatagram(Message::serialize(reply), fwdPeer->first.first, fwdPeer->first.second);
 		qDebug().noquote() << "Forwarded TunnelInMessage from" << peer
 						   << "to" << fwdPeer->first
 						   << (reply.replyKey ? "(replying allowed)" : "(replying denied)");
@@ -169,10 +170,4 @@ void PackageForwarder::MsgHandler::operator()(TunnelInMessage &&message)
 						   << message.peer.toHex(':');
 		self->sendError(peer, ErrorMessage::Error::InvalidPeer);
 	}
-}
-
-bool PackageForwarder::Peer::operator==(const PackageForwarder::Peer &other) const
-{
-	return host == other.host &&
-			port == other.port;
 }
