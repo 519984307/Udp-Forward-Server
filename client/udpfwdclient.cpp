@@ -46,18 +46,18 @@ QString UdpFwdClient::errorString() const
 	return _lastError;
 }
 
-void UdpFwdClient::send(const PublicKey &peer, const QByteArray &data, bool allowReply)
+void UdpFwdClient::send(const PublicKey &peer, const QByteArray &data, quint16 replyCount)
 {
-	sendImpl(TunnelInMessage::createEncrypted(_rng, peer, data,
-											  allowReply ? std::optional<PrivateKey>{_key} : std::nullopt));
+	sendImpl(peer, data, replyCount, false);
 }
 
-bool UdpFwdClient::reply(const QByteArray &peer, const QByteArray &data, bool allowReply)
+bool UdpFwdClient::reply(const QByteArray &peer, const QByteArray &data, quint16 replyCount, bool lastReply)
 {
-	auto pKey = _replyCache.take(peer);
-	if (pKey) {
-		send(*pKey, data, allowReply);
-		delete pKey;
+	auto info = _replyCache.object(peer);
+	if (info) {
+		sendImpl(info->key, data, replyCount, lastReply);
+		if (lastReply || --info->limit == 0)
+			_replyCache.remove(peer);
 		return true;
 	} else
 		return false;
@@ -89,13 +89,24 @@ void UdpFwdClient::readyRead()
 	}
 }
 
+void UdpFwdClient::sendImpl(const UdpFwdProto::PublicKey &peer, const QByteArray &data, quint16 replyCount, bool lastReply)
+{
+	sendImpl(TunnelInMessage::createEncrypted(_rng, peer, data,
+											  replyCount != 0 ?
+													PrivateReplyInfo{_key, replyCount} :
+													PrivateReplyInfo{},
+											  lastReply));
+}
+
+
+
 void UdpFwdClient::MsgHandler::operator()(TunnelOutMessage &&message)
 {
 	auto data = message.decrypt(self->_rng, self->_key);
-	if (message.replyKey) {
-		if (message.replyKey->Validate(self->_rng, 3)) {
-			const auto fp = fingerPrint(*message.replyKey);
-			self->_replyCache.insert(fp, new PublicKey{*message.replyKey});
+	if (message.replyInfo) {
+		if (message.replyInfo.key.Validate(self->_rng, 3)) {
+			const auto fp = fingerPrint(message.replyInfo.key);
+			self->_replyCache.insert(fp, new ReplyInfo{std::move(message.replyInfo)});
 			emit self->messageReceived(data, fp);
 		} else {
 			self->_lastError = tr("Received message with invalid reply key - message has been dropped!");

@@ -29,8 +29,8 @@ public:
 	QString errorString() const;
 
 public slots:
-	void send(const UdpFwdProto::PublicKey &peer, const QByteArray &data, bool allowReply = true);
-	bool reply(const QByteArray &peer, const QByteArray &data, bool allowReply = true);
+	void send(const UdpFwdProto::PublicKey &peer, const QByteArray &data, quint16 replyCount = 0);
+	bool reply(const QByteArray &peer, const QByteArray &data, quint16 replyCount = 0, bool lastReply = false);
 
 signals:
 	void messageReceived(const QByteArray &data, const QByteArray &replyPeer = {});
@@ -53,7 +53,7 @@ private:
 	QHostAddress _peerHost;
 	quint16 _peerPort = 0;
 
-	QCache<QByteArray, UdpFwdProto::PublicKey> _replyCache;
+	QCache<QByteArray, UdpFwdProto::ReplyInfo> _replyCache;
 	QString _lastError;
 
 	struct MsgHandler {
@@ -64,6 +64,8 @@ private:
 		void operator()(UdpFwdProto::TunnelOutMessage &&message);
 		void operator()(UdpFwdProto::ErrorMessage &&message);
 	};
+
+	void sendImpl(const UdpFwdProto::PublicKey &peer, const QByteArray &data, quint16 replyCount, bool lastReply);
 };
 
 template<typename TMessage>

@@ -28,29 +28,6 @@ Q_UDP_FWD_PROTOCOL_EXPORT CryptoPP::OID defaultCurve();
 Q_UDP_FWD_PROTOCOL_EXPORT QDataStream &operator<<(QDataStream &stream, const CryptoPP::CryptoMaterial &key); // TODO move to CryptoQQ
 Q_UDP_FWD_PROTOCOL_EXPORT QDataStream &operator>>(QDataStream &stream, CryptoPP::CryptoMaterial &key);
 
-template <typename TValue>
-QDataStream &operator<<(QDataStream &stream, const std::optional<TValue> &opt) {
-	if (opt)
-		stream << true << *opt;
-	else
-		stream << false;
-	return stream;
-}
-
-template <typename TValue>
-QDataStream &operator>>(QDataStream &stream, std::optional<TValue> &opt) {
-	stream.startTransaction();
-	bool valid;
-	stream >> valid;
-	if (valid) {
-		opt = TValue{}; // initialize opt to be not null
-		stream >> *opt;
-	} else
-		opt = std::nullopt;
-	stream.commitTransaction();
-	return stream;
-}
-
 Q_UDP_FWD_PROTOCOL_EXPORT QByteArray fingerPrint(const PublicKey &key);
 Q_UDP_FWD_PROTOCOL_EXPORT QByteArray fingerPrint(const PrivateKey &key);
 
@@ -65,12 +42,11 @@ Q_UDP_FWD_PROTOCOL_EXPORT PrivateKey generateKey(CryptoPP::RandomNumberGenerator
 namespace CryptoPP {
 
 Q_UDP_FWD_PROTOCOL_EXPORT bool operator!=(const UdpFwdProto::PublicKey &lhs, const UdpFwdProto::PublicKey &rhs);
+Q_UDP_FWD_PROTOCOL_EXPORT bool operator!=(const UdpFwdProto::PrivateKey &lhs, const UdpFwdProto::PrivateKey &rhs);
 
 }
 
 Q_DECLARE_METATYPE(UdpFwdProto::PublicKey)
 Q_DECLARE_METATYPE(UdpFwdProto::PrivateKey)
-Q_DECLARE_METATYPE(std::optional<UdpFwdProto::PublicKey>)
-Q_DECLARE_METATYPE(std::optional<UdpFwdProto::PrivateKey>)
 
 #endif // UDPFWDPROTO_H

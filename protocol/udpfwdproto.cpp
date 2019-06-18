@@ -24,23 +24,21 @@ void qdep_udp_fwd_protocol_init()
 
 void UdpFwdProto::registerTypes()
 {
+	// types
 	qRegisterMetaType<PublicKey>();
 	qRegisterMetaType<PrivateKey>();
+	qRegisterMetaType<ReplyInfo>();
+
 	qRegisterMetaType<AnnouncePeerMessage>();
 	qRegisterMetaType<DismissPeerMessage>();
 	qRegisterMetaType<TunnelInMessage>();
 	qRegisterMetaType<TunnelOutMessage>();
 	qRegisterMetaType<ErrorMessage>();
 
-	// special types
-	qRegisterMetaType<std::optional<PublicKey>>();
-	qRegisterMetaType<std::optional<PrivateKey>>();
-
 	// operators
 	qRegisterMetaTypeStreamOperators<PublicKey>();
 	qRegisterMetaTypeStreamOperators<PrivateKey>();
-	qRegisterMetaTypeStreamOperators<std::optional<PublicKey>>();
-	qRegisterMetaTypeStreamOperators<std::optional<PrivateKey>>();
+	qRegisterMetaTypeStreamOperators<ReplyInfo>();
 }
 
 OID UdpFwdProto::defaultCurve()
@@ -141,4 +139,18 @@ bool CryptoPP::operator!=(const UdpFwdProto::PublicKey &lhs, const UdpFwdProto::
 		return true;
 	else
 		return !(lhs == rhs);
+}
+
+bool CryptoPP::operator!=(const UdpFwdProto::PrivateKey &lhs, const UdpFwdProto::PrivateKey &rhs)
+{
+	if (!lhs.Validate(NullRNG(), 0) ||
+		!rhs.Validate(NullRNG(), 0))
+		return true;
+	else {
+		UdpFwdProto::PublicKey plhs;
+		lhs.MakePublicKey(plhs);
+		UdpFwdProto::PublicKey prhs;
+		rhs.MakePublicKey(prhs);
+		return plhs != prhs;
+	}
 }

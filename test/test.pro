@@ -10,7 +10,9 @@ SOURCES += \
 QDEP_PROJECT_ROOT = ..
 QDEP_PROJECT_LINK_DEPENDS += Skycoder42/cryptopp-qdep
 
-QDEP_DEPENDS += \
-	Skycoder42/Udp-Forward-Server@$${VERSION}/client/client.pri
+include(../protocol/protocol.pri)
+include(../client/client.pri)
+
+QDEP_DEPENDS = Skycoder42/CryptoQQ
 
 !load(qdep):error("Failed to load qdep feature! Run 'qdep.py prfgen --qmake $$QMAKE_QMAKE' to create it.")

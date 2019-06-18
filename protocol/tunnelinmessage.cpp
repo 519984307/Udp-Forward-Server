@@ -4,26 +4,21 @@ using namespace CryptoPP;
 using namespace UdpFwdProto;
 using namespace UdpFwdProto::__internal;
 
-TunnelInMessage TunnelInMessage::createEncrypted(RandomNumberGenerator &rng, const PublicKey &key, const QByteArray &data, std::optional<PrivateKey> replyKey)
+TunnelInMessage TunnelInMessage::createEncrypted(RandomNumberGenerator &rng, const PublicKey &key, const QByteArray &data, PrivateReplyInfo replyInfo, bool lastReply)
 {
-	std::optional<PublicKey> pubReplyKey;
-	if (replyKey) {
-		pubReplyKey = PublicKey{};
-		replyKey->MakePublicKey(*pubReplyKey);
-	}
-
 	TunnelInMessage message;
-	message.PayloadMessageBase::createEncrypted(rng, key, data, std::move(pubReplyKey));
+	message.PayloadMessageBase::createEncrypted(rng, key, data, std::move(replyInfo)); // will only move out the public part, private stays intact
 	message.peer = fingerPrint(key);
-
-	if (replyKey) {
+	message.lastReply = lastReply;
+	if (message.replyInfo) {
 		SignatureStream stream;
-		stream << message.peer
-			   << message.encryptedKey
+		stream << message.encryptedKey
 			   << message.iv
 			   << message.encryptedPayload
-			   << message.replyKey;
-		message.signature = stream.sign(rng, *replyKey);
+			   << message.replyInfo
+			   << message.peer
+			   << message.lastReply;
+		message.signature = stream.sign(rng, replyInfo.privKey); // okay because only base was moved
 	}
 
 	return message;
@@ -31,14 +26,24 @@ TunnelInMessage TunnelInMessage::createEncrypted(RandomNumberGenerator &rng, con
 
 bool TunnelInMessage::verifySignature() const
 {
-	if (replyKey) {
+	if (replyInfo) {
 		SignatureStream stream;
-		stream << peer
-			   << encryptedKey
+		stream << encryptedKey
 			   << iv
 			   << encryptedPayload
-			   << replyKey;
-		return stream.verify(signature, *replyKey);
+			   << replyInfo
+			   << peer
+			   << lastReply;
+		return stream.verify(signature, replyInfo.key);
 	} else
 		return false;
+}
+
+
+
+PrivateReplyInfo::PrivateReplyInfo(PrivateKey key, quint16 limit) :
+	ReplyInfo{{}, limit},
+	privKey{std::move(key)}
+{
+	privKey.MakePublicKey(this->key);
 }

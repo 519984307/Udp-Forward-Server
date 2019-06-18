@@ -81,21 +81,21 @@ void PackageForwarder::MsgHandler::operator ()(AnnouncePeerMessage &&message)
 					   << "announced itself for" << fingerprint.toHex(':')
 					   << (message.oneTime ? "(as one-time)" : "");
 	if (message.oneTime)
-		self->_replyCache.insert({fingerprint, std::nullopt}, new PeerInfo{std::move(peer), std::move(message.key)});
+		self->_replyCache.insert({fingerprint, std::nullopt}, new PeerInfo{std::move(peer), std::move(message.key), 0});
 	else
-		self->_peerCache.insert(fingerprint, {std::move(peer), std::move(message.key)});
+		self->_peerCache.insert(fingerprint, {std::move(peer), std::move(message.key), 1});
 }
 
 void PackageForwarder::MsgHandler::operator()(DismissPeerMessage &&message)
 {
 	// remove from peer cache
 	const auto pIt = std::find_if(self->_peerCache.begin(), self->_peerCache.end(), [this](const PeerInfo &cPeer) {
-		return peer == cPeer.first;
+		return peer == std::get<0>(cPeer);
 	});
 
 	bool verified = false;
 	if (pIt != self->_peerCache.end()) {
-		if (message.verifySignature(pIt->second)) {
+		if (message.verifySignature(std::get<1>(*pIt))) {
 			verified = true;
 			self->_peerCache.erase(pIt);
 		} else {
@@ -108,8 +108,9 @@ void PackageForwarder::MsgHandler::operator()(DismissPeerMessage &&message)
 	// remove all from reply cache
 	if (message.clearReplies) {
 		for (const auto &key : self->_replyCache.keys()) {
-			if (self->_replyCache.object(key)->first == peer) {
-				if (!verified && !message.verifySignature(pIt->second)) {
+			auto peerInfo = self->_replyCache.object(key);
+			if (std::get<0>(*peerInfo) == peer) {
+				if (!verified && !message.verifySignature(std::get<1>(*peerInfo))) {
 					qWarning() << "Received DismissPeerMessage from" << peer
 							   << "with invalid signature";
 					return;
@@ -125,8 +126,8 @@ void PackageForwarder::MsgHandler::operator()(DismissPeerMessage &&message)
 
 void PackageForwarder::MsgHandler::operator()(TunnelInMessage &&message)
 {
-	if (message.replyKey) {
-		if (!message.replyKey->Validate(self->_rng, 3)) {
+	if (message.replyInfo) {
+		if (!message.replyInfo.key.Validate(self->_rng, 3)) {
 			qWarning() << "Received TunnelInMessage from" << peer
 					   << "with invalid replyKey";
 			self->sendError(peer, ErrorMessage::Error::InvalidKey);
@@ -141,28 +142,38 @@ void PackageForwarder::MsgHandler::operator()(TunnelInMessage &&message)
 	}
 
 	// find the target to forward the message to
-	std::optional<PeerInfo> fwdPeer;
-	auto target = self->_replyCache.take({message.peer, peer}); // find a reply slot for this concrete sender
-	if (!target)
-		target = self->_replyCache.take({message.peer, std::nullopt}); // find a generic reply slot
-	if (target) {
-		fwdPeer = *target;
-		delete target;
-	} else
-		fwdPeer = self->_peerCache.value(message.peer);
+	// first, search for an explicit reply
+	std::optional<ReplyId> cleanupId {{message.peer, peer}};
+	auto target = self->_replyCache.object(*cleanupId); // find a reply slot for this concrete sender
+	// not found -> search for an implicit reply
+	if (!target) {
+		cleanupId = {message.peer, std::nullopt};
+		target = self->_replyCache.object(*cleanupId);
+	}
+	// still not found -> search for an announced peer
+	if (!target && self->_peerCache.contains(message.peer)) {
+		cleanupId = std::nullopt;
+		target = &self->_peerCache[message.peer];
+	}
 
 	// send the message and prepare a possible reply
-	if (fwdPeer) {
+	if (target) {
 		TunnelOutMessage reply;
 		static_cast<PayloadMessageBase&>(reply) = std::move(message); // move assign the payload part
-		if (reply.replyKey) {
-			const auto fingerprint = fingerPrint(*reply.replyKey);
-			self->_replyCache.insert({fingerprint, fwdPeer->first}, new PeerInfo{std::move(peer), *std::move(reply.replyKey)});
+		if (reply.replyInfo) {
+			const auto fingerprint = fingerPrint(reply.replyInfo.key);
+			self->_replyCache.insert({fingerprint, std::get<0>(*target)}, new PeerInfo {
+										 std::move(peer),
+										 std::move(reply.replyInfo.key),
+										 reply.replyInfo.limit
+									 });
 		}
-		self->_socket->writeDatagram(Message::serialize(reply), fwdPeer->first.first, fwdPeer->first.second);
+		self->_socket->writeDatagram(Message::serialize(reply), std::get<0>(*target).first, std::get<0>(*target).second);
 		qDebug().noquote() << "Forwarded TunnelInMessage from" << peer
-						   << "to" << fwdPeer->first
-						   << (reply.replyKey ? "(replying allowed)" : "(replying denied)");
+						   << "to" << std::get<0>(*target)
+						   << (reply.replyInfo ? "(replying allowed)" : "(replying denied)");
+		if (cleanupId && --std::get<2>(*target) == 0)
+			self->_replyCache.remove(*cleanupId);
 	} else {
 		qDebug().noquote() << "Received TunnelInMessage from" << peer
 						   << "but was not able to find target identity"

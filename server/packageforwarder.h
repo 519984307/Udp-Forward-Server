@@ -32,13 +32,13 @@ private slots:
 
 private:
 	using Peer = std::pair<QHostAddress, quint16>; // (host, port)
-	using PeerInfo = std::pair<Peer, UdpFwdProto::PublicKey>; // (peer, pubKey)
-	using ReplyInfo = std::pair<QByteArray, std::optional<Peer>>; // (fingerprint, sender)
+	using PeerInfo = std::tuple<Peer, UdpFwdProto::PublicKey, quint16>; // (peer, pubKey, limit)
+	using ReplyId = std::pair<QByteArray, std::optional<Peer>>; // (fingerprint, sender)
 
 	QUdpSocket *_socket;
 	CryptoPP::AutoSeededRandomPool _rng;
 	QHash<QByteArray, PeerInfo> _peerCache;
-	QCache<ReplyInfo, PeerInfo> _replyCache;
+	QCache<ReplyId, PeerInfo> _replyCache;
 
 	struct MsgHandler {
 		PackageForwarder *self;

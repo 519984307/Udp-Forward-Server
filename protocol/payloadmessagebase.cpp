@@ -7,7 +7,7 @@ using namespace CryptoQQ;
 using namespace UdpFwdProto;
 using namespace UdpFwdProto::__internal;
 
-void PayloadMessageBase::createEncrypted(RandomNumberGenerator &rng, const PublicKey &key, const QByteArray &data, std::optional<PublicKey> &&replyKey)
+void PayloadMessageBase::createEncrypted(RandomNumberGenerator &rng, const PublicKey &key, const QByteArray &data, ReplyInfo replyInfo)
 {
 	EncryptionScheme::Encryptor keyEnc {key};
 	E2EScheme::Encryption dataEnc;
@@ -36,8 +36,7 @@ void PayloadMessageBase::createEncrypted(RandomNumberGenerator &rng, const Publi
 		}
 	};
 
-	// pack all into a message and send it
-	this->replyKey = std::move(replyKey);
+	this->replyInfo = std::move(replyInfo);
 }
 
 QByteArray PayloadMessageBase::decrypt(RandomNumberGenerator &rng, const UdpFwdProto::PrivateKey &key) const
@@ -68,4 +67,37 @@ QByteArray PayloadMessageBase::decrypt(RandomNumberGenerator &rng, const UdpFwdP
 	};
 
 	return data;
+}
+
+
+
+ReplyInfo::ReplyInfo(PublicKey key, quint16 limit) :
+	limit{limit},
+	key{std::move(key)}
+{}
+
+ReplyInfo::operator bool() const
+{
+	return limit != 0;
+}
+
+bool ReplyInfo::operator!() const
+{
+	return limit == 0;
+}
+
+QDataStream &operator<<(QDataStream &stream, const ReplyInfo &info)
+{
+	stream << info.limit;
+	if (info.limit != 0)
+		stream << info.key;
+	return stream;
+}
+
+QDataStream &operator>>(QDataStream &stream, ReplyInfo &info)
+{
+	stream >> info.limit;
+	if (info.limit != 0)
+		stream >> info.key;
+	return stream;
 }
