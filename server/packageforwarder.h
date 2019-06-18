@@ -35,12 +35,6 @@ private:
 	using PeerInfo = std::pair<Peer, UdpFwdProto::PublicKey>; // (peer, pubKey)
 	using ReplyInfo = std::pair<QByteArray, std::optional<Peer>>; // (fingerprint, sender)
 
-	friend inline QDebug operator<<(QDebug debug, const Peer &peer) {
-		QDebugStateSaver state{debug};
-		debug.noquote().nospace() << peer.first.toString() << ":" << peer.second;
-		return debug;
-	}
-
 	QUdpSocket *_socket;
 	CryptoPP::AutoSeededRandomPool _rng;
 	QHash<QByteArray, PeerInfo> _peerCache;
@@ -62,5 +56,8 @@ template <typename T>
 inline uint qHash(const std::optional<T> &key, uint seed = 0) Q_DECL_NOEXCEPT_EXPR(noexcept(qHash(*key, seed))) {
 	return key ? qHash(*key, seed) : seed;
 }
+
+template<>
+inline QDebug operator<<(QDebug debug, const std::pair<QHostAddress, quint16> &peer);
 
 #endif // PACKAGEFORWARDER_H

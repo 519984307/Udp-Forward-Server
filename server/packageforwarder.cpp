@@ -171,3 +171,10 @@ void PackageForwarder::MsgHandler::operator()(TunnelInMessage &&message)
 		self->sendError(peer, ErrorMessage::Error::InvalidPeer);
 	}
 }
+
+template<>
+inline QDebug operator<<(QDebug debug, const std::pair<QHostAddress, quint16> &peer) {
+	QDebugStateSaver state{debug};
+	debug.noquote().nospace() << peer.first.toString() << ":" << peer.second;
+	return debug;
+}
