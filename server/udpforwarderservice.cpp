@@ -1,5 +1,9 @@
 #include "udpforwarderservice.h"
 
+const QString UdpForwarderService::KeyCacheSize {QStringLiteral("cache/size")};
+const QString UdpForwarderService::KeyBindAddress {QStringLiteral("bind/address")};
+const QString UdpForwarderService::KeyBindPort {QStringLiteral("bind/port")};
+
 UdpForwarderService::UdpForwarderService(int &argc, char **argv) :
 	Service{argc, argv}
 {
@@ -11,8 +15,19 @@ UdpForwarderService::UdpForwarderService(int &argc, char **argv) :
 
 QtService::Service::CommandResult UdpForwarderService::onStart()
 {
-	_forwarder = new PackageForwarder{10000, this}; // TODO read from settings
-	if (!_forwarder->create(getSocket()))
+	_settings = new QSettings{this};
+	_settings->setFallbacksEnabled(true);
+
+	_forwarder = new PackageForwarder{_settings->value(KeyCacheSize, 10000).toInt(), this};
+	auto socket = getSocket();
+	bool ok;
+	if (socket != -1)
+		ok = _forwarder->create(socket);
+	else {
+		ok = _forwarder->create(QHostAddress{_settings->value(KeyBindAddress, QHostAddress{QHostAddress::Any}.toString()).toString()},
+								static_cast<quint16>(_settings->value(KeyBindPort, UdpFwdProto::DefaultPort).toUInt()));
+	}
+	if (!ok)
 		return CommandResult::Failed;
 
 	return CommandResult::Completed;

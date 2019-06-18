@@ -79,7 +79,7 @@ QByteArray UdpFwdProto::fingerPrint(const PublicKey &key)
 	QByteArray keydata;
 	QByteArraySink sink{keydata};
 	key.Save(sink);
-	
+
 	QByteArray fingerprint;
 	SHA3_256 hash;
 	QByteArraySource {
@@ -138,5 +138,5 @@ UdpFwdProto::PrivateKey UdpFwdProto::generateKey(RandomNumberGenerator &rng, con
 
 bool CryptoPP::operator!=(const UdpFwdProto::PublicKey &lhs, const UdpFwdProto::PublicKey &rhs)
 {
-	return !(lhs == rhs);
+	return fingerPrint(lhs) != fingerPrint(rhs);
 }

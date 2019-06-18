@@ -18,6 +18,7 @@ public:
 	explicit PackageForwarder(int cacheSize, QObject *parent = nullptr);
 
 	bool create(int socket);
+	bool create(const QHostAddress &address, quint16 port);
 
 public slots:
 
@@ -31,6 +32,12 @@ private:
 	using Peer = std::pair<QHostAddress, quint16>; // (host, port)
 	using PeerInfo = std::pair<Peer, UdpFwdProto::PublicKey>; // (peer, pubKey)
 	using ReplyInfo = std::pair<QByteArray, std::optional<Peer>>; // (fingerprint, sender)
+
+	friend inline QDebug operator<<(QDebug debug, const Peer &peer) {
+		QDebugStateSaver state{debug};
+		debug.noquote().nospace() << peer.first.toString() << ":" << peer.second;
+		return debug;
+	}
 
 	QUdpSocket *_socket;
 	QHash<QByteArray, PeerInfo> _peerCache;
@@ -47,5 +54,10 @@ private:
 
 	void sendError(const Peer &peer, UdpFwdProto::ErrorMessage::Error error);
 };
+
+template <typename T>
+inline uint qHash(const std::optional<T> &key, uint seed = 0) Q_DECL_NOEXCEPT_EXPR(noexcept(qHash(*key, seed))) {
+	return key ? qHash(*key, seed) : seed;
+}
 
 #endif // PACKAGEFORWARDER_H

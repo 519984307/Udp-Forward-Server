@@ -3,11 +3,6 @@
 #include "tunneloutmessage.h"
 using namespace UdpFwdProto;
 
-template <typename T>
-inline uint qHash(const std::optional<T> &key, uint seed = 0) Q_DECL_NOEXCEPT_EXPR(noexcept(qHash(*key, seed))) {
-	return key ? qHash(*key, seed) : seed;
-}
-
 PackageForwarder::PackageForwarder(int cacheSize, QObject *parent) :
 	QObject{parent},
 	_socket{new QUdpSocket{this}},
@@ -21,16 +16,22 @@ PackageForwarder::PackageForwarder(int cacheSize, QObject *parent) :
 
 bool PackageForwarder::create(int socket)
 {
-	bool ok;
-	if (socket != -1)
-		ok = _socket->setSocketDescriptor(socket, QAbstractSocket::BoundState);
-	else
-		ok = _socket->bind(QHostAddress::Any, 13119, QAbstractSocket::DontShareAddress | QAbstractSocket::ReuseAddressHint);
-	if (!ok) {
-		qCritical() << "Failed create UDP-socket with error:"
+	if (!_socket->setSocketDescriptor(socket, QAbstractSocket::BoundState)) {
+		qCritical() << "Failed to attach UDP-socket with error:"
 					<< qUtf8Printable(_socket->errorString());
-	}
-	return ok;
+		return false;
+	} else
+		return true;
+}
+
+bool PackageForwarder::create(const QHostAddress &address, quint16 port)
+{
+	if (!_socket->bind(address, port, QAbstractSocket::DontShareAddress | QAbstractSocket::ReuseAddressHint)) {
+		qCritical() << "Failed to create UDP-socket with error:"
+					<< qUtf8Printable(_socket->errorString());
+		return false;
+	} else
+		return true;
 }
 
 void PackageForwarder::socketError()
@@ -43,13 +44,13 @@ void PackageForwarder::readyRead()
 {
 	while (_socket->hasPendingDatagrams()) {
 		const auto datagram = _socket->receiveDatagram();
+		const Peer peer {datagram.senderAddress(), datagram.senderPort()};
+		qDebug() << peer << datagram.data();
 		try {
-			MsgHandler handler{this, {datagram.senderAddress(), datagram.senderPort()}};
+			MsgHandler handler{this, peer};
 			std::visit(handler, Message::deserialize<AnnouncePeerMessage, DismissPeerMessage, TunnelInMessage>(datagram.data()));
 		} catch (std::bad_variant_access &) {
-			qCritical() << "Received invalid message from"
-						<< datagram.senderAddress() << "on port"
-						<< datagram.senderPort();
+			qWarning() << "Received invalid datagram from" << peer;
 		}
 	}
 }
@@ -63,13 +64,17 @@ void PackageForwarder::sendError(const Peer &peer, ErrorMessage::Error error)
 
 void PackageForwarder::MsgHandler::operator ()(AnnouncePeerMessage &&message)
 {
-	qDebug() << Q_FUNC_INFO << peer;
 	if (!message.verifySignature()) {
+		qWarning() << "Received AnnouncePeerMessage from" << peer
+				   << "with invalid signature";
 		self->sendError(peer, ErrorMessage::Error::InvalidSignature);
 		return;
 	}
 
 	const auto fingerprint = fingerPrint(message.key);
+	qDebug().noquote() << "Peer" << peer
+					   << "announced itself for" << fingerprint.toHex(':')
+					   << (message.oneTime ? "(as one-time)" : "");
 	if (message.oneTime)
 		self->_replyCache.insert({fingerprint, std::nullopt}, new PeerInfo{std::move(peer), std::move(message.key)});
 	else
@@ -78,7 +83,6 @@ void PackageForwarder::MsgHandler::operator ()(AnnouncePeerMessage &&message)
 
 void PackageForwarder::MsgHandler::operator()(DismissPeerMessage &&message)
 {
-	qDebug() << Q_FUNC_INFO << peer;
 	// remove from peer cache
 	const auto pIt = std::find_if(self->_peerCache.begin(), self->_peerCache.end(), [this](const PeerInfo &cPeer) {
 		return peer == cPeer.first;
@@ -89,26 +93,36 @@ void PackageForwarder::MsgHandler::operator()(DismissPeerMessage &&message)
 		if (message.verifySignature(pIt->second)) {
 			verified = true;
 			self->_peerCache.erase(pIt);
-		} else
+		} else {
+			qWarning() << "Received DismissPeerMessage from" << peer
+					   << "with invalid signature";
 			return;
+		}
 	}
 
 	// remove all from reply cache
 	if (message.clearReplies) {
 		for (const auto &key : self->_replyCache.keys()) {
 			if (self->_replyCache.object(key)->first == peer) {
-				if (verified || message.verifySignature(pIt->second))
-					self->_replyCache.remove(key);
+				if (!verified && !message.verifySignature(pIt->second)) {
+					qWarning() << "Received DismissPeerMessage from" << peer
+							   << "with invalid signature";
+					return;
+				}
+				self->_replyCache.remove(key);
 				break;
 			}
 		}
 	}
+
+	qDebug().noquote() << "Peer" << peer << "was dismissed";
 }
 
 void PackageForwarder::MsgHandler::operator()(TunnelInMessage &&message)
 {
-	qDebug() << Q_FUNC_INFO << peer;
 	if (!message.verifySignature()) {
+		qWarning() << "Received TunnelInMessage from" << peer
+				   << "with invalid signature";
 		self->sendError(peer, ErrorMessage::Error::InvalidSignature);
 		return;
 	}
@@ -133,6 +147,13 @@ void PackageForwarder::MsgHandler::operator()(TunnelInMessage &&message)
 			self->_replyCache.insert({fingerprint, fwdPeer->first}, new PeerInfo{std::move(peer), *std::move(reply.replyKey)});
 		}
 		self->_socket->writeDatagram(Message::serialize(reply), fwdPeer->first.first, fwdPeer->first.second);
-	} else
+		qDebug().noquote() << "Forwarded TunnelInMessage from" << peer
+						   << "to" << fwdPeer->first
+						   << (reply.replyKey ? "(replying allowed)" : "(replying denied)");
+	} else {
+		qDebug().noquote() << "Received TunnelInMessage from" << peer
+						   << "but was not able to find target identity"
+						   << message.peer.toHex(':');
 		self->sendError(peer, ErrorMessage::Error::InvalidPeer);
+	}
 }

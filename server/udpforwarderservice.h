@@ -2,6 +2,7 @@
 #define UDPFORWARDERSERVICE_H
 
 #include <QtService/Service>
+#include <QSettings>
 
 #include "packageforwarder.h"
 
@@ -17,6 +18,11 @@ protected:
 	CommandResult onStop(int &exitCode) override;
 
 private:
+	static const QString KeyCacheSize;
+	static const QString KeyBindAddress;
+	static const QString KeyBindPort;
+
+	QSettings *_settings = nullptr;
 	PackageForwarder *_forwarder = nullptr;
 };
 
