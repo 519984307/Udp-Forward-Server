@@ -1,6 +1,6 @@
 TEMPLATE = app
 
-VERSION = 1.0.4
+VERSION = 1.0.5
 
 CONFIG += console warning_clean exceptions c++17
 
