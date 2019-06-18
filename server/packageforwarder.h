@@ -5,6 +5,8 @@
 #include <QUdpSocket>
 #include <QCache>
 
+#include <cryptopp/osrng.h>
+
 #include <announcepeermessage.h>
 #include <dismisspeermessage.h>
 #include <tunnelinmessage.h>
@@ -40,6 +42,7 @@ private:
 	}
 
 	QUdpSocket *_socket;
+	CryptoPP::AutoSeededRandomPool _rng;
 	QHash<QByteArray, PeerInfo> _peerCache;
 	QCache<ReplyInfo, PeerInfo> _replyCache;
 

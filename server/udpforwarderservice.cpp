@@ -24,7 +24,9 @@ QtService::Service::CommandResult UdpForwarderService::onStart()
 	if (socket != -1)
 		ok = _forwarder->create(socket);
 	else {
-		ok = _forwarder->create(QHostAddress{_settings->value(KeyBindAddress, QHostAddress{QHostAddress::Any}.toString()).toString()},
+		ok = _forwarder->create(_settings->contains(KeyBindAddress) ?
+									QHostAddress{_settings->value(KeyBindAddress).toString()} :
+									QHostAddress{QHostAddress::Any},
 								static_cast<quint16>(_settings->value(KeyBindPort, UdpFwdProto::DefaultPort).toUInt()));
 	}
 	if (!ok)

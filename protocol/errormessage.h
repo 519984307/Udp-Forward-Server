@@ -17,7 +17,8 @@ public:
 	enum class Error {
 		Unknown,
 		InvalidPeer,
-		InvalidSignature
+		InvalidSignature,
+		InvalidKey
 	};
 	Q_ENUM(Error)
 

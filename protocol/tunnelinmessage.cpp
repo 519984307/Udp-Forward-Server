@@ -40,5 +40,5 @@ bool TunnelInMessage::verifySignature() const
 			   << replyKey;
 		return stream.verify(signature, *replyKey);
 	} else
-		return true;  // returns true as messages without a key do not need to be signed and thus are valid without a signature
+		return false;
 }

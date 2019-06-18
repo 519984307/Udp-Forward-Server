@@ -82,9 +82,9 @@ void UdpFwdClient::readyRead()
 			MsgHandler handler{this, datagram.senderAddress(), static_cast<quint16>(datagram.senderPort())};
 			std::visit(handler, Message::deserialize<TunnelOutMessage, ErrorMessage>(datagram.data()));
 		} catch (std::bad_variant_access &) {
-			qCritical() << "Received invalid message from"
-						<< datagram.senderAddress() << "on port"
-						<< datagram.senderPort();
+			qWarning() << "UdpFwdClient: Ignoring invalid message from"
+					   << datagram.senderAddress() << "on port"
+					   << datagram.senderPort();
 		}
 	}
 }
@@ -93,9 +93,14 @@ void UdpFwdClient::MsgHandler::operator()(TunnelOutMessage &&message)
 {
 	auto data = message.decrypt(self->_rng, self->_key);
 	if (message.replyKey) {
-		const auto fp = fingerPrint(*message.replyKey);
-		self->_replyCache.insert(fp, new PublicKey{*message.replyKey});
-		emit self->messageReceived(data, fp);
+		if (message.replyKey->Validate(self->_rng, 3)) {
+			const auto fp = fingerPrint(*message.replyKey);
+			self->_replyCache.insert(fp, new PublicKey{*message.replyKey});
+			emit self->messageReceived(data, fp);
+		} else {
+			self->_lastError = tr("Received message with invalid reply key - message has been dropped!");
+			emit self->error();
+		}
 	} else
 		emit self->messageReceived(data);
 }
@@ -108,6 +113,9 @@ void UdpFwdClient::MsgHandler::operator()(ErrorMessage &&message)
 		break;
 	case ErrorMessage::Error::InvalidSignature:
 		self->_lastError = tr("Message was rejected by the forward server - invalid signature!");
+		break;
+	case ErrorMessage::Error::InvalidKey:
+		self->_lastError = tr("Message was rejected by the forward server - invalid public key!");
 		break;
 	case ErrorMessage::Error::Unknown:
 		self->_lastError = self->_socket->errorString(); // maybe info is here

@@ -64,6 +64,12 @@ void PackageForwarder::sendError(const Peer &peer, ErrorMessage::Error error)
 
 void PackageForwarder::MsgHandler::operator ()(AnnouncePeerMessage &&message)
 {
+	if (!message.key.Validate(self->_rng, 3)) {
+		qWarning() << "Received AnnouncePeerMessage from" << peer
+				   << "with invalid key";
+		self->sendError(peer, ErrorMessage::Error::InvalidKey);
+		return;
+	}
 	if (!message.verifySignature()) {
 		qWarning() << "Received AnnouncePeerMessage from" << peer
 				   << "with invalid signature";
@@ -120,11 +126,19 @@ void PackageForwarder::MsgHandler::operator()(DismissPeerMessage &&message)
 
 void PackageForwarder::MsgHandler::operator()(TunnelInMessage &&message)
 {
-	if (!message.verifySignature()) {
-		qWarning() << "Received TunnelInMessage from" << peer
-				   << "with invalid signature";
-		self->sendError(peer, ErrorMessage::Error::InvalidSignature);
-		return;
+	if (message.replyKey) {
+		if (!message.replyKey->Validate(self->_rng, 3)) {
+			qWarning() << "Received TunnelInMessage from" << peer
+					   << "with invalid replyKey";
+			self->sendError(peer, ErrorMessage::Error::InvalidKey);
+			return;
+		}
+		if (!message.verifySignature()) {
+			qWarning() << "Received TunnelInMessage from" << peer
+					   << "with invalid signature";
+			self->sendError(peer, ErrorMessage::Error::InvalidSignature);
+			return;
+		}
 	}
 
 	// find the target to forward the message to

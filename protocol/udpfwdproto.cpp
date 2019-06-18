@@ -59,15 +59,13 @@ QDataStream &UdpFwdProto::operator<<(QDataStream &stream, const CryptoMaterial &
 
 QDataStream &UdpFwdProto::operator>>(QDataStream &stream, CryptoMaterial &key)
 {
-	thread_local AutoSeededRandomPool rng;
-
 	stream.startTransaction();
 	char *data = nullptr;
 	uint len = 0;
 	stream.readBytes(data, len);
 	QByteArraySource source{QByteArray::fromRawData(data, static_cast<int>(len)), true};
 	key.Load(source);
-	if (key.Validate(rng, 3))
+	if (key.Validate(NullRNG(), 0))
 		stream.commitTransaction();
 	else
 		stream.abortTransaction();
@@ -138,5 +136,9 @@ UdpFwdProto::PrivateKey UdpFwdProto::generateKey(RandomNumberGenerator &rng, con
 
 bool CryptoPP::operator!=(const UdpFwdProto::PublicKey &lhs, const UdpFwdProto::PublicKey &rhs)
 {
-	return fingerPrint(lhs) != fingerPrint(rhs);
+	if (!lhs.Validate(NullRNG(), 0) ||
+		!rhs.Validate(NullRNG(), 0))
+		return true;
+	else
+		return !(lhs == rhs);
 }
