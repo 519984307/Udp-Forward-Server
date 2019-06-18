@@ -45,7 +45,6 @@ void PackageForwarder::readyRead()
 	while (_socket->hasPendingDatagrams()) {
 		const auto datagram = _socket->receiveDatagram();
 		const Peer peer {datagram.senderAddress(), datagram.senderPort()};
-		qDebug() << peer << datagram.data();
 		try {
 			MsgHandler handler{this, peer};
 			std::visit(handler, Message::deserialize<AnnouncePeerMessage, DismissPeerMessage, TunnelInMessage>(datagram.data()));
