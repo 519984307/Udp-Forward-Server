@@ -33,12 +33,14 @@ void UdpFwdProto::registerTypes()
 	qRegisterMetaType<ErrorMessage>();
 
 	// special types
-	qRegisterMetaType<std::optional<PublicKey>>("std::optional<PublicKey>");
+	qRegisterMetaType<std::optional<PublicKey>>();
+	qRegisterMetaType<std::optional<PrivateKey>>();
 
 	// operators
 	qRegisterMetaTypeStreamOperators<PublicKey>();
 	qRegisterMetaTypeStreamOperators<PrivateKey>();
-	qRegisterMetaTypeStreamOperators<std::optional<PublicKey>>("std::optional<PublicKey>");
+	qRegisterMetaTypeStreamOperators<std::optional<PublicKey>>();
+	qRegisterMetaTypeStreamOperators<std::optional<PrivateKey>>();
 }
 
 OID UdpFwdProto::defaultCurve()

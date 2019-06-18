@@ -14,7 +14,7 @@ struct Q_UDP_FWD_PROTOCOL_EXPORT PayloadMessageBase : public Message
 	Q_PROPERTY(QByteArray encryptedKey MEMBER encryptedKey)
 	Q_PROPERTY(QByteArray iv MEMBER iv)
 	Q_PROPERTY(QByteArray encryptedPayload MEMBER encryptedPayload)
-	Q_PROPERTY(std::optional<PublicKey> replyKey MEMBER replyKey)
+	Q_PROPERTY(std::optional<UdpFwdProto::PublicKey> replyKey MEMBER replyKey)
 
 public:
 	QByteArray encryptedKey;

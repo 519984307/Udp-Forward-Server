@@ -40,7 +40,7 @@ UDP_FWD_SVC_CRYPTOPP_PKG = $$(UDP_FWD_SVC_CRYPTOPP_PKG)
 	QDEP_PROJECT_DEPENDS += Skycoder42/cryptopp-qdep
 
 QDEP_DEPENDS += \
-	Skycoder42/Udp-Forward-Server@1.0.1/protocol/protocol.pri
+	Skycoder42/Udp-Forward-Server@1.0.2/protocol/protocol.pri
 
 UDP_FWD_SVC_INSTALL_BINS = $$(UDP_FWD_SVC_INSTALL_BINS)
 UDP_FWD_SVC_INSTALL_LIBS = $$(UDP_FWD_SVC_INSTALL_LIBS)

@@ -70,5 +70,7 @@ Q_UDP_FWD_PROTOCOL_EXPORT bool operator!=(const UdpFwdProto::PublicKey &lhs, con
 
 Q_DECLARE_METATYPE(UdpFwdProto::PublicKey)
 Q_DECLARE_METATYPE(UdpFwdProto::PrivateKey)
+Q_DECLARE_METATYPE(std::optional<UdpFwdProto::PublicKey>)
+Q_DECLARE_METATYPE(std::optional<UdpFwdProto::PrivateKey>)
 
 #endif // UDPFWDPROTO_H

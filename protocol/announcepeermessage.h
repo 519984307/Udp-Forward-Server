@@ -9,7 +9,7 @@ struct Q_UDP_FWD_PROTOCOL_EXPORT AnnouncePeerMessage : public Message
 {
 	Q_GADGET
 
-	Q_PROPERTY(PublicKey key MEMBER key)
+	Q_PROPERTY(UdpFwdProto::PublicKey key MEMBER key)
 	Q_PROPERTY(bool oneTime MEMBER oneTime)
 	Q_PROPERTY(QByteArray signature MEMBER signature)
 
