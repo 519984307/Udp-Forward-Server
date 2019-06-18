@@ -10,7 +10,7 @@ win32: TARGET = $${TARGET_BASE}svc
 else:unix: TARGET = $${TARGET_BASE}d
 unix: TARGET = $$TARGET_BASE
 
-VERSION = 1.0.0
+VERSION = 1.0.3
 
 QMAKE_TARGET_PRODUCT = "Udp-Forward-Server"
 QMAKE_TARGET_DESCRIPTION = "The Udp-Forward-Server Service"
@@ -40,7 +40,7 @@ UDP_FWD_SVC_CRYPTOPP_PKG = $$(UDP_FWD_SVC_CRYPTOPP_PKG)
 	QDEP_PROJECT_DEPENDS += Skycoder42/cryptopp-qdep
 
 QDEP_DEPENDS += \
-	Skycoder42/Udp-Forward-Server@1.0.2/protocol/protocol.pri
+	Skycoder42/Udp-Forward-Server@1.0.3/protocol/protocol.pri
 
 UDP_FWD_SVC_INSTALL_BINS = $$(UDP_FWD_SVC_INSTALL_BINS)
 UDP_FWD_SVC_INSTALL_LIBS = $$(UDP_FWD_SVC_INSTALL_LIBS)
